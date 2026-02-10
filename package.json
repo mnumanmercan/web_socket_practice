@@ -1,0 +1,16 @@
+{
+  "name": "basit-chat-uygulamasi",
+  "version": "1.0.0",
+  "description": "Socket.IO ile basit bir chat uygulaması",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["chat", "socket.io", "websocket"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1"
+  }
+}
