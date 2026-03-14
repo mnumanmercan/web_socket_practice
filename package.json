@@ -4,13 +4,30 @@
   "description": "Socket.IO ile basit bir chat uygulaması",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "phase1:basics": "npx ts-node src/phase1/01_typescript_basics.ts",
+    "phase1:protocol": "npx ts-node src/phase1/02_message_protocol.ts",
+    "phase2:server": "npx ts-node src/phase2/websocket_server.ts",
+    "phase4:server": "npx ts-node src/phase4/server.ts",
+    "build": "npx tsc"
   },
-  "keywords": ["chat", "socket.io", "websocket"],
+  "keywords": [
+    "chat",
+    "socket.io",
+    "websocket"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.6.1"
+    "socket.io": "^4.6.1",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/ws": "^8.18.1",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
