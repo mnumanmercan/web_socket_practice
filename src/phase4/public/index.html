@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TypeScript Chat — Phase 4</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #16213e;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #0f3460;
+    }
+
+    header h1 { font-size: 18px; color: #e94560; }
+    #status { font-size: 12px; padding: 3px 8px; border-radius: 12px; background: #333; }
+    #status.connected { background: #1b5e20; color: #a5d6a7; }
+    #status.disconnected { background: #b71c1c; color: #ffcdd2; }
+
+    .app {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Login screen ─────────────────────────── */
+    #login {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .login-card {
+      background: #16213e;
+      padding: 40px;
+      border-radius: 12px;
+      width: 320px;
+      border: 1px solid #0f3460;
+    }
+
+    .login-card h2 { margin-bottom: 20px; text-align: center; }
+    .login-card input {
+      width: 100%; padding: 10px; margin-bottom: 12px;
+      background: #0f3460; border: 1px solid #e94560;
+      color: white; border-radius: 6px; font-size: 14px;
+    }
+    .login-card button {
+      width: 100%; padding: 10px;
+      background: #e94560; border: none; color: white;
+      border-radius: 6px; cursor: pointer; font-size: 14px;
+    }
+    .login-card button:hover { background: #c73652; }
+
+    /* ── Chat layout ──────────────────────────── */
+    #chat { flex: 1; display: none; overflow: hidden; }
+
+    .chat-layout {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      height: 100%;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: #16213e;
+      border-right: 1px solid #0f3460;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar h3 {
+      padding: 12px 16px;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #888;
+      border-bottom: 1px solid #0f3460;
+    }
+
+    #room-list { flex: 1; overflow-y: auto; }
+
+    .room-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .room-item:hover { background: #0f3460; }
+    .room-item.active { background: #e94560; color: white; }
+
+    .room-item .count {
+      font-size: 11px;
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    /* Main chat area */
+    .chat-main {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      padding: 12px 20px;
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+      font-weight: bold;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .msg {
+      max-width: 70%;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .msg.own { align-self: flex-end; background: #e94560; }
+    .msg.other { align-self: flex-start; background: #16213e; border: 1px solid #0f3460; }
+
+    .msg .name { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
+    .msg .time { font-size: 11px; opacity: 0.5; margin-top: 4px; text-align: right; }
+
+    .system-msg {
+      align-self: center;
+      font-size: 12px;
+      color: #888;
+      font-style: italic;
+      padding: 4px 0;
+    }
+
+    #typing-indicator {
+      padding: 6px 20px;
+      font-size: 12px;
+      color: #888;
+      font-style: italic;
+      min-height: 24px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #16213e;
+      border-top: 1px solid #0f3460;
+    }
+
+    #msg-input {
+      flex: 1; padding: 10px 14px;
+      background: #0f3460; border: 1px solid #0f3460;
+      color: white; border-radius: 20px; font-size: 14px;
+      outline: none;
+    }
+
+    #msg-input:focus { border-color: #e94560; }
+
+    #send-btn {
+      padding: 10px 20px;
+      background: #e94560; border: none; color: white;
+      border-radius: 20px; cursor: pointer; font-size: 14px;
+    }
+
+    #send-btn:disabled { background: #555; cursor: not-allowed; }
+    #send-btn:hover:not(:disabled) { background: #c73652; }
+
+    .no-room {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>TypeScript Chat</h1>
+    <span id="status" class="disconnected">Disconnected</span>
+    <span id="user-label" style="margin-left:auto; font-size:14px; color:#aaa;"></span>
+  </header>
+
+  <div class="app">
+    <!-- Login -->
+    <div id="login">
+      <div class="login-card">
+        <h2>Join the Chat</h2>
+        <input id="username-input" type="text" placeholder="Your username" maxlength="20">
+        <button id="join-btn">Join</button>
+        <p id="login-error" style="color:#e94560; font-size:13px; margin-top:10px; text-align:center;"></p>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div id="chat">
+      <div class="chat-layout">
+        <div class="sidebar">
+          <h3>Rooms</h3>
+          <div id="room-list"></div>
+        </div>
+        <div class="chat-main">
+          <div class="chat-header" id="chat-header">Select a room</div>
+          <div id="messages"><div class="no-room">← Join a room to start chatting</div></div>
+          <div id="typing-indicator"></div>
+          <div class="input-row">
+            <input id="msg-input" type="text" placeholder="Type a message..." maxlength="500" disabled>
+            <button id="send-btn" disabled>Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────
+    // STATE
+    // ─────────────────────────────────────────
+    let ws = null;
+    let myUsername = null;
+    let myUserId = null;
+    let currentRoomId = null;
+    let typingTimer = null;
+    let isTyping = false;
+
+    // ─────────────────────────────────────────
+    // DOM REFS
+    // ─────────────────────────────────────────
+    const statusEl = document.getElementById('status');
+    const loginEl = document.getElementById('login');
+    const chatEl = document.getElementById('chat');
+    const userLabel = document.getElementById('user-label');
+    const roomListEl = document.getElementById('room-list');
+    const messagesEl = document.getElementById('messages');
+    const chatHeader = document.getElementById('chat-header');
+    const msgInput = document.getElementById('msg-input');
+    const sendBtn = document.getElementById('send-btn');
+    const typingEl = document.getElementById('typing-indicator');
+    const loginError = document.getElementById('login-error');
+
+    // ─────────────────────────────────────────
+    // WEBSOCKET CONNECTION
+    // ─────────────────────────────────────────
+    function connect() {
+      ws = new WebSocket(`ws://${location.host}`);
+
+      ws.onopen = () => {
+        statusEl.textContent = 'Connected';
+        statusEl.className = 'connected';
+      };
+
+      ws.onclose = (e) => {
+        statusEl.textContent = 'Disconnected';
+        statusEl.className = 'disconnected';
+        // Reconnect after 3s
+        setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => {};
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        handleMessage(msg);
+      };
+    }
+
+    function send(data) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(data));
+      }
+    }
+
+    // ─────────────────────────────────────────
+    // MESSAGE HANDLER — mirrors Phase 1 pattern
+    // ─────────────────────────────────────────
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'WELCOME':
+          myUserId = msg.userId;
+          break;
+
+        case 'USERNAME_SET':
+          myUsername = msg.username;
+          loginEl.style.display = 'none';
+          chatEl.style.display = 'flex';
+          userLabel.textContent = `@${myUsername}`;
+          send({ type: 'LIST_ROOMS' });
+          break;
+
+        case 'ERROR':
+          if (!myUsername) {
+            loginError.textContent = msg.message;
+          } else {
+            appendSystem(`Error: ${msg.message}`);
+          }
+          break;
+
+        case 'ROOM_LIST':
+          renderRoomList(msg.rooms);
+          break;
+
+        case 'ROOM_JOINED':
+          currentRoomId = msg.roomId;
+          chatHeader.textContent = `#${msg.roomId}`;
+          messagesEl.innerHTML = '';
+          msgInput.disabled = false;
+          sendBtn.disabled = false;
+          appendSystem(`You joined #${msg.roomId} (${msg.members.length} members: ${msg.members.join(', ')})`);
+          highlightActiveRoom();
+          break;
+
+        case 'ROOM_LEFT':
+          if (currentRoomId === msg.roomId) {
+            currentRoomId = null;
+            chatHeader.textContent = 'Select a room';
+            msgInput.disabled = true;
+            sendBtn.disabled = true;
+          }
+          break;
+
+        case 'CHAT_MESSAGE':
+          if (msg.roomId === currentRoomId) {
+            appendMessage(msg);
+          }
+          break;
+
+        case 'USER_JOINED':
+          if (msg.roomId === currentRoomId) {
+            appendSystem(`${msg.username} joined the room`);
+          }
+          send({ type: 'LIST_ROOMS' }); // refresh member counts
+          break;
+
+        case 'USER_LEFT':
+          if (msg.roomId === currentRoomId) {
+            appendSystem(`${msg.username} left the room`);
+          }
+          send({ type: 'LIST_ROOMS' });
+          break;
+
+        case 'TYPING':
+          if (msg.roomId === currentRoomId) {
+            typingEl.textContent = msg.isTyping ? `${msg.username} is typing...` : '';
+          }
+          break;
+      }
+    }
+
+    // ─────────────────────────────────────────
+    // UI HELPERS
+    // ─────────────────────────────────────────
+    function renderRoomList(rooms) {
+      roomListEl.innerHTML = '';
+      rooms.forEach(room => {
+        const el = document.createElement('div');
+        el.className = 'room-item' + (room.id === currentRoomId ? ' active' : '');
+        el.dataset.id = room.id;
+        el.innerHTML = `#${room.name} <span class="count">${room.memberCount}</span>`;
+        el.onclick = () => joinRoom(room.id);
+        roomListEl.appendChild(el);
+      });
+    }
+
+    function highlightActiveRoom() {
+      document.querySelectorAll('.room-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.id === currentRoomId);
+      });
+    }
+
+    function joinRoom(roomId) {
+      if (roomId === currentRoomId) return;
+      if (currentRoomId) send({ type: 'LEAVE_ROOM', roomId: currentRoomId });
+      send({ type: 'JOIN_ROOM', roomId });
+    }
+
+    function appendMessage(msg) {
+      const isOwn = msg.senderId === myUserId;
+      const div = document.createElement('div');
+      div.className = `msg ${isOwn ? 'own' : 'other'}`;
+      const time = new Date(msg.timestamp).toLocaleTimeString();
+      div.innerHTML = `
+        ${!isOwn ? `<div class="name">${escHtml(msg.senderName)}</div>` : ''}
+        <div>${escHtml(msg.text)}</div>
+        <div class="time">${time}</div>
+      `;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function appendSystem(text) {
+      const div = document.createElement('div');
+      div.className = 'system-msg';
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function escHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // ─────────────────────────────────────────
+    // INPUT EVENTS
+    // ─────────────────────────────────────────
+    document.getElementById('join-btn').onclick = () => {
+      const u = document.getElementById('username-input').value.trim();
+      if (!u) return;
+      loginError.textContent = '';
+      send({ type: 'SET_USERNAME', username: u });
+    };
+
+    document.getElementById('username-input').onkeypress = (e) => {
+      if (e.key === 'Enter') document.getElementById('join-btn').click();
+    };
+
+    sendBtn.onclick = sendMessage;
+    msgInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+
+    function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text || !currentRoomId) return;
+      send({ type: 'SEND_MESSAGE', text, roomId: currentRoomId });
+      msgInput.value = '';
+      // Stop typing indicator
+      send({ type: 'TYPING', roomId: currentRoomId, isTyping: false });
+      isTyping = false;
+    }
+
+    msgInput.oninput = () => {
+      if (!currentRoomId) return;
+      if (!isTyping) {
+        isTyping = true;
+        send({ type: 'TYPING', roomId: currentRoomId, isTyping: true });
+      }
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        isTyping = false;
+        send({ type: 'TYPING', roomId: currentRoomId, isTyping: false });
+      }, 1500);
+    };
+
+    // Start!
+    connect();
+  </script>
+</body>
+</html>
